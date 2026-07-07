@@ -1,269 +1,141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Planejamento e Gestão - SPG</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-  <!-- (mantive CSS inline igual ao original para facilitar integração) -->
   <style>
-    :root{ --gd:#1e8554; --gm:#2e7d47; --ga:#3a9a5c; --gl:#e8f5ed; --gb:#b2dfca; --gll:#f4faf6; --acc:#00a651; --red:#c0392b; --td:#1a2e22; --tm:#3d5a47; --tl:#6b8c78; --wh:#fff; --bg:#f4f7f5; --bd:#d4e6db; --sidebar-bg:#e9eae9; }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--td);min-height:100vh;font-size:13px;}
-    .topbar{background:var(--gd);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:65px;box-shadow:0 2px 4px rgba(0,0,0,0.08);}
-    .topbar-left{display:flex;align-items:center;gap:35px;height:100%;}
-    .topbar-brand-box{display:flex;align-items:center;gap:12px;}
-    .ceara-brasao{width:34px;height:34px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;}
-    .brand-text{display:flex;flex-direction:column;line-height:1.1;}
-    .brand-text .main-logo{font-size:22px;font-weight:800;letter-spacing:0.5px;}
-    .brand-text .sub-logo{font-size:8px;font-weight:600;letter-spacing:0.3px;opacity:0.9;text-transform:uppercase;}
-    .brand-divider{width:1px;height:30px;background:rgba(255,255,255,0.3);margin:0 2px;}
-    .spg-logo{font-size:20px;font-weight:700;letter-spacing:0.5px;}
-    .topbar-nav{display:flex;gap:4px;height:100%;align-items:center;margin-top:4px;}
-    .topbar-nav a{color:rgba(255,255,255,0.85);font-size:13px;font-weight:700;padding:0 16px;cursor:pointer;text-decoration:none;height:100%;display:flex;align-items:center;position:relative;transition:color 0.2s;}
-    .topbar-nav a.active{color:#fff;}
-    .topbar-nav a.active::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:3px;background:#fff;border-radius:2px 2px 0 0;}
-    .topbar-nav a:hover{color:#fff;}
-    .topbar-right{display:flex;align-items:center;gap:22px;color:#fff;}
-    .help-link{display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer;opacity:0.95;text-decoration:none;color:#fff;}
-    .help-link:hover{opacity:1;}
-    .help-ico{font-size:18px;}
-    .noti-box{cursor:pointer;position:relative;font-size:16px;opacity:0.9;}
-    .noti-box:hover{opacity:1;}
-    .user-menu-trigger{display:flex;align-items:center;gap:5px;cursor:pointer;opacity:0.9;}
-    .user-menu-trigger:hover{opacity:1;}
-    .user-ico{font-size:18px;}
-    .arrow-down{font-size:9px;opacity:0.8;}
-    .layout{display:flex;min-height:calc(100vh - 65px);}    
-    .sidebar{width:240px;min-width:240px;background:var(--sidebar-bg);border-right:1px solid #dbdcda;padding:0;}
-    .sidebar-user{display:flex;flex-direction:column;align-items:center;padding:20px 14px 16px;border-bottom:1px solid #cccdcc;background:rgba(0,0,0,0.02);margin-bottom:0;}
-    .sidebar-av{width:70px;height:70px;border-radius:50%;background:#a3b4c1;display:flex;align-items:center;justify-content:center;font-size:45px;color:#f0f4f7;margin-bottom:10px;overflow:hidden;}
-    .sidebar-name{font-size:13px;color:#333e48;text-align:center;font-weight:400;letter-spacing:0.3px;}
-    .sidebar-title{padding:20px 20px 12px 20px;font-size:13.5px;color:#3d4a54;font-weight:400;line-height:1.4;}
-    .sidebar-menu{list-style:none;}
-    .menu-item{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;cursor:pointer;font-size:13.5px;color:#3d4a54;transition:background .12s;font-weight:400;}
-    .menu-item-inner{display:flex;align-items:center;gap:12px;}
-    .menu-item .ico{font-size:16px;opacity:0.8;display:inline-block;width:20px;text-align:center;}
-    .menu-item .arrow{font-size:11px;color:#3d4a54;opacity:0.7;font-family:monospace;}
-    .menu-item:hover, .menu-item.active{background:rgba(0,0,0,0.04);color:#111;}
-    .menu-item.active{font-weight:600;background:rgba(0,0,0,0.06);}
-    .main{flex:1;padding:24px 28px;overflow-x:auto;}
-    .breadcrumb{font-size:11.5px;color:var(--tl);margin-bottom:16px;}
-    .breadcrumb a{color:var(--ga);text-decoration:none;}
-    .step-sel{display:flex;gap:18px;margin-bottom:24px;}
-    .step-card{flex:1;border:2px solid var(--bd);border-radius:10px;padding:26px 20px;cursor:pointer;background:var(--wh);transition:all .18s;text-align:center;}
-    .step-card:hover{border-color:var(--ga);box-shadow:0 4px 16px rgba(58,154,92,.13);}
-    .step-card.sel{border-color:var(--acc);background:var(--gl);}    
-    .step-card .ico{font-size:30px;margin-bottom:8px;}
-    .step-card .ttl{font-size:15px;font-weight:700;color:var(--gd);margin-bottom:5px;}
-    .step-card.sel .ttl{color:var(--acc);}
-    .step-card .desc{font-size:11.5px;color:var(--tl);line-height:1.5;}
-    .fc{background:var(--wh);border:1px solid var(--bd);border-radius:10px;box-shadow:0 2px 12px rgba(26,92,46,.09);overflow:hidden;animation:fu .25s ease;}
-    @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .fc-head{background:var(--gd);color:#fff;padding:13px 22px;display:flex;align-items:center;justify-content:space-between;}
-    .fc-head h2{font-size:14px;font-weight:600;letter-spacing:.4px;}
-    .badge{background:rgba(255,255,255,.17);border-radius:20px;padding:3px 13px;font-size:11.5px;font-weight:600;letter-spacing:.4px;}
-    .fb{padding:20px 24px 6px;}
-    .frow{display:flex;gap:16px;margin-bottom:14px;}
-    .fg{flex:1;display:flex;flex-direction:column;gap:4px;}
-    .fl{font-size:10.5px;font-weight:600;color:var(--gd);text-transform:uppercase;letter-spacing:.7px;margin:4px 0 12px;padding-bottom:5px;border-bottom:1.5px solid var(--gb);}
-    .fl.req::after{content:'*';color:var(--red);margin-left:2px;}
-    select,input[type=text], input[type=number]{width:100%;padding:8px 11px;border:1.5px solid var(--bd);border-radius:6px;font-size:12.5px;font-family:'IBM Plex Sans',sans-serif;color:var(--td);background:var(--wh);transition:border-color .15s;}
-    select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%233a9a5c' stroke-width='1.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;cursor:pointer;}
-    select:focus,input[type=text]:focus, input[type=number]:focus{outline:none;border-color:var(--ga);box-shadow:0 0 0 3px rgba(58,154,92,.11);}    
-    .stitle{font-size:11px;font-weight:700;color:var(--gm);text-transform:uppercase;letter-spacing:.7px;margin:4px 0 12px;padding-bottom:5px;border-bottom:1.5px solid var(--gb);}
-    .section-wrap{padding:20px 24px 8px;}
-    .item-block{border:1.5px solid var(--bd);border-radius:10px;overflow:hidden;margin-bottom:14px;background:var(--wh);}    
-    .item-block-head{background:var(--gl);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;}
-    .item-block-num{font-size:11px;font-weight:700;color:var(--gd);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:8px;}
-    .num-badge{background:var(--gd);color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;}
-    .gid-block{border:1.5px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:10px;transition: border-color 0.2s;}
-    .gid-block.has-error{border-color: var(--red);}
-    .gid-block-body{padding:12px 12px 4px;}
-    .duod-wrap{padding:12px;background:var(--gll);border-top:1px solid var(--bd);transition: background-color 0.2s;}
-    .gid-block.has-error .duod-wrap{background-color: #fdf2f2;}
-    .duod-header-actions{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:8px;border-bottom:1px dashed var(--bd);}
-    .duod-label{font-size:10px;font-weight:700;color:var(--gm);text-transform:uppercase;letter-spacing:.6px;}
-    .auto-dist-box{display:flex;align-items:center;gap:8px;}
-    .auto-dist-box input{width:140px;padding:5px 8px;font-size:12px;}
-    .btn-action-small{background:var(--ga);color:#fff;border:none;padding:6px 12px;border-radius:4px;font-size:11.5px;font-weight:600;cursor:pointer;transition:background 0.1s;}
-    .btn-action-small:hover{background:var(--gd);}    
-    .error-msg-box{font-size:11px;color:var(--red);font-weight:600;margin-top:6px;display:none;align-items:center;gap:4px;}
-    .dgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
-    .dm{border:1px solid var(--bd);border-radius:6px;overflow:hidden;background:var(--wh);}    
-    .dm-head{background:var(--gd);color:#fff;padding:4px 8px;font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
-    .dm-body{padding:7px 8px;}
-    .df{margin-bottom:5px;}
-    .dfl{font-size:8.5px;font-weight:600;color:var(--tl);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
-    .df input{width:100%;padding:4px 7px;border:1px solid var(--bd);border-radius:4px;font-size:10.5px;font-family:'IBM Plex Mono',monospace;color:var(--td);background:var(--wh);text-align:right;}
-    .df input[readonly]{background:var(--gl);color:var(--tm);}    
-    .remaj-group{border:1.5px solid var(--bd);border-radius:8px;overflow:hidden;margin-bottom:10px;}
-    .remaj-group-head{padding:8px 14px;display:flex;align-items:center;justify-content:space-between;}
-    .remaj-group-head.origem{background:#fff8e1;}
-    .remaj-group-head.destino{background:var(--gl);}    
-    .remaj-group-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;}
-    .remaj-group-head.origem .remaj-group-title{color:#7c5c00;}
-    .remaj-group-head.destino .remaj-group-title{color:var(--gd);}    
-    .remaj-group-body{padding:12px 14px 10px;}
-    .btn-add-outline{display:flex;align-items:center;gap:6px;background:var(--wh);border:1.5px dashed var(--gb);border-radius:6px;padding:7px 14px;cursor:pointer;color:var(--ga);font-size:12px;font-weight:600;width:100%;margin-top:8px;justify-content:center;}
-    .rs{padding:0 24px 24px;}
-    .rs-title{font-size:11px;font-weight:700;color:var(--gm);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px;padding-bottom:5px;border-bottom:1.5px solid var(--gb);display:flex;align-items:center;justify-content:space-between;}
-    .rt{width:100%;border-collapse:collapse;font-size:11.5px;border:1.5px solid var(--gb);border-radius:8px;}
-    .rt thead tr{background:var(--gd);}    
-    .rt thead th{padding:9px 13px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;text-align:right;color:rgba(255,255,255,.9);}    
-    .rt thead th:first-child{text-align:left;width:38%;}
-    .rt tbody td{padding:8px 13px;border-bottom:1px solid var(--bd);text-align:right;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--td);}    
-    .rt tbody td:first-child{text-align:left;font-family:'IBM Plex Sans',sans-serif;}
-    .cat-hd td{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:7px 13px;background:var(--gl);color:var(--gd);}
-    .grand-row td{background:var(--gd);color:#fff;font-weight:700;font-size:12px;padding:10px 13px;}
-    .js{padding:0 24px 18px;}
-    .jl{font-size:10.5px;font-weight:700;color:var(--gd);text-transform:uppercase;letter-spacing:.7px;margin-bottom:5px;}
-    textarea{width:100%;min-height:72px;border:1.5px solid var(--bd);border-radius:6px;padding:9px 11px;font-size:12.5px;}    
-    .fa{padding:16px 24px;border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:flex-end;gap:10px;background:#fafcfa;}
-    .btn{padding:9px 20px;border-radius:6px;font-size:12.5px;font-weight:600;cursor:pointer;border:none;}
-    .btn-cancel{background:var(--wh);color:var(--gd);border:1.5px solid var(--gb);}
-    .btn-primary{background:var(--gd);color:var(--wh);border:1.5px solid var(--gd);}    
-    .btn-primary:disabled{background:#a3cbb5;border-color:#a3cbb5;cursor:not-allowed;}
-    .hidden{display:none!important;}
+    :root { --gd:#1e8554; --gm:#2e7d47; --ga:#3a9a5c; --gl:#e8f5ed; --gb:#b2dfca; --acc:#00a651; --red:#c0392b; --td:#1a2e22; --tm:#3d5a47; --tl:#6b8c78; --wh:#fff; --bg:#f4faf6; --bd:#d4e6db; --sidebar-b:#e9eae9; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--td);min-height:100vh;font-size:13px}
+    .topbar{background:var(--gd);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 24px}
+    .topbar-left{display:flex;align-items:center;gap:12px}
+    .logo{width:34px;height:34px;background:rgba(0,0,0,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .topbar-right{display:flex;align-items:center;gap:12px}
+    .layout{display:flex;min-height:calc(100vh - 65px)}
+    .sidebar{width:240px;background:var(--sidebar-b);padding:0}
+    .sidebar-user{display:flex;flex-direction:column;padding:20px 14px 16px 16px;border-bottom:1px solid #ccc}
+    .sidebar-adv{width:70px;height:70px;border-radius:50%;background:#a3b4c1;display:flex;align-items:center;justify-content:center}
+    .main{flex:1;padding:24px 28px;overflow-x:auto}
+    .breadcrumb{font-size:11.5px;color:var(--ga);margin-bottom:16px}
+    .step-sel{display:flex;gap:18px;margin-bottom:24px}
+    .step-card{flex:1;border:2px solid var(--bd);border-radius:10px;padding:20px 20px}
+    .step-card .title{font-size:11px;font-weight:700;color:var(--gm)}
+    .item-block{border:1px solid var(--bd);padding:12px 12px 4px;margin-bottom:12px}
+    .gid-block{border:1px solid var(--bd);padding:12px;margin-top:8px}
+    .duod-wrap{border-radius:6px;padding:8px;margin-top:8px}
+    .dm{width:100%;display:inline-block}
+    .dm-head{font-size:12px;font-weight:600}
+    .dm-body{display:flex;gap:8px;align-items:center}
+    .df{display:flex;flex-direction:column}
+    .error-msg-box{display:none;background:#fff1f0;border:1px solid #ffc9c6;padding:8px;border-radius:6px;margin-top:8px;color:#7a1f18}
+    .has-error{box-shadow:0 0 0 2px rgba(255,0,0,0.05)}
+    .btn-action-small{background:var(--gd);color:#fff;border:0;padding:6px 10px;border-radius:6px;cursor:pointer}
+    .hidden{display:none}
+    table{width:100%;border-collapse:collapse}
+    table tr.cat-hd td{background:#f7f9f7;padding:8px;font-weight:700}
+    table tr.grand-row td{background:#e9f7ef;padding:8px;font-weight:800}
+    .num-badge{background:#e6e6e6;padding:4px 6px;border-radius:6px;margin-right:8px}
   </style>
 </head>
 <body>
 <div class="topbar">
   <div class="topbar-left">
-    <div class="topbar-brand-box">
-      <div class="ceara-brasao">🏛️</div>
-      <div class="brand-text">
-        <span class="main-logo">SEPLAG</span>
-        <span class="sub-logo">Governo do Estado do Ceará</span>
-      </div>
-      <div class="brand-divider"></div>
-      <span class="spg-logo">SPG</span>
+    <div class="logo">SPG</div>
+    <div>
+      <div style="font-weight:700">SEPLAG</div>
+      <div style="font-size:12px;opacity:.9">Governo do Estado do Ceará</div>
     </div>
-    <nav class="topbar-nav">
-      <a>SIAP</a>
-      <a class="active">Limite COGERF</a>
-      <a>SISTER</a>
-    </nav>
   </div>
   <div class="topbar-right">
-    <a class="help-link">
-      <span>Precisa de ajuda?</span>
-      <span class="help-ico">💬</span>
-    </a>
-    <div class="noti-box">🔔</div>
-    <div class="user-menu-trigger">
-      <span class="user-ico">👤</span>
-      <span class="arrow-down">▼</span>
-    </div>
+    <div class="help-link"><span>Precisa de ajuda?</span></div>
   </div>
 </div>
 
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-user">
-      <div class="sidebar-av">
-        <svg viewBox="0 0 24 24" width="60" height="60" fill="#6d8294"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>
-      </div>
+      <div class="sidebar-adv"><svg viewBox="0 0 24 24" width="60" height="60" fill="#6d8294"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg></div>
       <div class="sidebar-name">DENISE MARIA ALBINO MELO</div>
     </div>
-
-    <div class="sidebar-title">Programação Operativa Anual 2026</div>
-    <ul class="sidebar-menu">
-      <li><div class="menu-item active"><div class="menu-item-inner"><span class="ico">📊</span><span>Solicitações</span></div><span class="arrow">&gt;</span></div></li>
-      <li><div class="menu-item"><div class="menu-item-inner"><span class="ico">👥</span><span>Terceirização</span></div><span class="arrow">&gt;</span></div></li>
-      <li><div class="menu-item"><div class="menu-item-inner"><span class="ico">☰</span><span>Monitoramento de Gastos</span></div><span class="arrow">&gt;</span></div></li>
-      <li><div class="menu-item"><div class="menu-item-inner"><span class="ico">📖</span><span>Consultas</span></div><span class="arrow">&gt;</span></div></li>
-      <li><div class="menu-item"><div class="menu-item-inner"><span class="ico">👤</span><span>Admin</span></div><span class="arrow">&gt;</span></div></li>
-    </ul>
   </aside>
 
   <main class="main">
-    <div class="breadcrumb"><a>Limite Financeiro</a> / <span id="bcTipo">Nova Solicitação</span></div>
+    <div class="breadcrumb">SPG > Limite COGERF</div>
 
-    <div class="step-sel" id="stepSel">
-      <div class="step-card" onclick="selectTipo('suplementacao')" id="card-suplementacao">
-        <div class="ico">➕</div>
-        <div class="ttl">Suplementação</div>
-        <div class="desc">Solicitar acréscimo ao limite financeiro vigente de um ou mais MAPPs/GIDs.</div>
+    <div id="stepSel" class="step-sel">
+      <div class="step-card">
+        <div class="title">Suplementação</div>
+        <div class="desc">Solicitar acréscimo ao limite financeiro...</div>
       </div>
-      <div class="step-card" onclick="selectTipo('remanejamento')" id="card-remanejamento">
-        <div class="ico">🔄</div>
-        <div class="ttl">Remanejamento</div>
-        <div class="desc">Transferir saldo entre MAPPs ou GIDs. Permite múltiplas origens e destinos.</div>
+      <div class="step-card">
+        <div class="title">Remanejamento</div>
+        <div class="desc">Transferir saldo entre MAPPs ou GIDs.</div>
       </div>
     </div>
 
-    <div class="fc hidden" id="mainForm">
-      <div class="fc-head">
-        <h2>PEDIDO</h2>
-        <span class="badge" id="tipoBadge"></span>
+    <div id="mainForm" class="hidden">
+      <div id="suplementacaoSection" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div><strong id="tipoBadge">TIPO</strong></div>
+          <div>
+            <button id="btnAddSupl" class="btn-action-small">+ Adicionar MAPP</button>
+          </div>
+        </div>
+        <div id="suplBlocks"></div>
       </div>
 
-      <div class="fb">
-        <div class="frow">
-          <div class="fg">
-            <label class="fl req">Fonte</label>
-            <select id="selectFonte">
-              <option value="">Selecione a fonte...</option>
-              <option>100 - Recursos do Tesouro Estadual</option>
-              <option>200 - Recursos de Outras Fontes</option>
-            </select>
+      <div id="remanejamentoSection" class="hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div><strong>Remanejamento</strong></div>
+          <div>
+            <button id="btnAddRemaj" class="btn-action-small">+ Adicionar Remanejamento</button>
+          </div>
+        </div>
+        <div id="remajBlocks"></div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:1">
+          <div class="fc">
+            <label class="fl req">Justificativa</label>
+            <textarea id="justificativa" style="width:100%;height:80px;padding:8px;border-radius:6px;border:1px solid #e6e6e6"></textarea>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+            <button class="btn-action-small" onclick="resetForm()">Cancelar</button>
+            <button id="btnSalvar" class="btn-action-small" style="background:#2ecc71">Salvar</button>
+            <button id="btnClearDraft" class="btn-action-small" style="background:#fff;border:1px solid #ddd;color:#c0392b;margin-left:8px;">Limpar rascunho</button>
+          </div>
+        </div>
+        <div style="width:420px">
+          <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid #e6e6e6">
+            <h4 style="margin-bottom:8px">Resumo</h4>
+            <div style="max-height:300px;overflow:auto">
+              <table><tbody id="resumoBody"></tbody></table>
+            </div>
+          </div>
+
+          <!-- attachments preview placed next to summary for convenience -->
+          <div style="background:#fff;padding:12px;border-radius:8px;border:1px solid #e6e6e6;margin-top:12px">
+            <h4 style="margin-bottom:8px">Anexos</h4>
+            <input type="file" id="fileInput" multiple style="width:100%" />
+            <div id="attachmentsList" style="margin-top:8px"></div>
           </div>
         </div>
       </div>
 
-      <div id="suplementacaoSection" class="hidden">
-        <div class="section-wrap">
-          <div class="stitle">Suplementações</div>
-          <div id="suplBlocks"></div>
-          <button class="btn-add-outline" id="btnAddSupl">＋ Adicionar outro MAPP</button>
-        </div>
-      </div>
-
-      <div id="remanejamentoSection" class="hidden">
-        <div class="section-wrap">
-          <div class="stitle">Remanejamentos</div>
-          <div id="remajBlocks"></div>
-          <button class="btn-add-outline" id="btnAddRemaj">＋ Adicionar outro remanejamento</button>
-        </div>
-      </div>
-
-      <div class="rs">
-        <div class="rs-title"><span>📊 Quadro Resumo — Limites por Tipo de MAPP</span></div>
-        <div id="rsBody">
-          <table class="rt">
-            <thead><tr>
-              <th style="text-align:left;">Grupo / MAPP</th>
-              <th>Deliberado (D)</th>
-              <th id="thR">Revisado (R)</th>
-              <th>Diferença</th>
-              <th>%</th>
-            </tr></thead>
-            <tbody id="resumoBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="js">
-        <div class="jl">Justificativa <span style="color:var(--red)">*</span></div>
-        <textarea id="justificativa" placeholder="Descreva a justificativa para esta solicitação..."></textarea>
-      </div>
-
-      <div style="padding:12px 24px;">
-        <button id="btnClearDraft" class="btn btn-cancel" type="button">Limpar rascunho</button>
-      </div>
-
-      <div class="fa">
-        <button class="btn btn-cancel" onclick="resetForm()">Cancelar</button>
-        <button class="btn btn-primary" id="btnSalvar">Concluir Solicitação</button>
-      </div>
     </div>
+
+    <div style="margin-top:20px">
+      <div style="font-size:12px;color:#888">Exporte/Compartilhe</div>
+    </div>
+
   </main>
 </div>
 
-<!-- Carrega o JS refatorado -->
 <script src="assets/js/limites.js"></script>
 </body>
 </html>
