@@ -1,6 +1,9 @@
-// Limites - refactor (2026-07-07)
-// Contém lógica reutilizável e funções puras para testes.
-// Se jest/module for detectado, exporta as funções para os testes.
+// Limites - refactor (2026-07-07) - updated
+// Alterações:
+// - Não alteramos mais o campo "total" quando o usuário modifica os meses;
+//   agora exigimos que a soma dos meses seja igual ao total para permitir salvar.
+// - Mensagens de erro mais claras (menor/maior que o total).
+// - Adicionado suporte a anexos (input type=file) — nomes salvos em rascunho (não o conteúdo).
 
 (function(window){
   // Constantes e dados
@@ -18,16 +21,10 @@
   let currentTipo=null, suplCount=0, remajCount=0, gidUid=0;
   let activeUids = [];
 
-  // Base estática (mantive sua estrutura)
-  const base={
-    MANUTENÇÃO:[{mapp:'3',desc:'Manutenção Unidades',gid:'SERVIÇOS PJ',deliberado:1240000,revisado:1240000}],
-    FINALÍSTICO:[{mapp:'12',desc:'Fortalecimento Social',gid:'MATERIAL CONSUMO',deliberado:650000,revisado:650000}],
-    GESTÃO:[{mapp:'5',desc:'Gestão e Manutenção',gid:'DIÁRIAS',deliberado:320000,revisado:320000}]
-  };
+  const STORAGE_KEY = 'limites_solicitacao_draft_v1';
 
   // ---------- FUNÇÕES PURAS (testáveis) ----------
   function distribuirIgualCalc(total){
-    // total: número (reais) ou string numérica
     const totalCent = Math.round(Number(total) * 100);
     if (!isFinite(totalCent) || totalCent <= 0) return Array(12).fill(0);
     const baseCent = Math.floor(totalCent / 12);
@@ -36,15 +33,6 @@
     // distribuir o resto nos últimos meses (para que os primeiros fiquem iguais)
     for (let i = 11; resto > 0 && i >= 0; i--, resto--) arr[i] = arr[i] + 1;
     return arr.map(c => c / 100);
-  }
-
-  function somaMesesFromUid(uid){
-    let soma = 0;
-    for (let i = 0; i < 12; i++){
-      const el = document.getElementById(`sup-${uid}-${i}`);
-      soma += (el && parseFloat(el.value)) || 0;
-    }
-    return soma;
   }
 
   function findMaxUid(){
@@ -107,14 +95,8 @@
         if (el) somaMeses += parseFloat(el.value) || 0;
       }
 
-      // Ajuste automático quando alteração veio dos meses e soma <= teto
-      if (origemAlteracao === 'mes' && somaMeses > 0 && tetoMax > 0 && parseFloat(somaMeses.toFixed(2)) <= parseFloat(tetoMax.toFixed(2))){
-        if (inputTeto) { inputTeto.value = parseFloat(somaMeses.toFixed(2)); tetoMax = somaMeses; }
-      } else if (origemAlteracao === 'mes' && tetoMax === 0 && somaMeses > 0) {
-        // Se não havia teto definido, atualiza o teto com a soma
-        if (inputTeto) inputTeto.value = parseFloat(somaMeses.toFixed(2));
-        tetoMax = somaMeses;
-      }
+      // NÃO alteramos mais o teto automaticamente quando o usuário editar os meses.
+      // Em vez disso, mostramos erro quando soma != teto e impedimos salvar.
 
       // Se usuário não definiu teto e não há meses preenchidos => limpa erro
       if (tetoMax <= 0 && somaMeses === 0) {
@@ -126,10 +108,13 @@
         return;
       }
 
-      // Validação de ultrapassagem
+      // Validações e mensagens específicas
       if (parseFloat(somaMeses.toFixed(2)) > parseFloat(tetoMax.toFixed(2))) {
         if (blockWrapper) blockWrapper.classList.add('has-error');
-        if (errorBox) errorBox.style.display = 'flex';
+        if (errorBox) { errorBox.style.display = 'flex'; errorBox.textContent = '⚠️ A soma dos meses ultrapassa o valor total definido. Ajuste os meses ou reduza o total.'; }
+      } else if (parseFloat(somaMeses.toFixed(2)) < parseFloat(tetoMax.toFixed(2))) {
+        if (blockWrapper) blockWrapper.classList.add('has-error');
+        if (errorBox) { errorBox.style.display = 'flex'; errorBox.textContent = '⚠️ A soma dos meses é menor que o valor total. Distribua exatamente o total para prosseguir.'; }
       } else {
         if (blockWrapper) blockWrapper.classList.remove('has-error');
         if (errorBox) errorBox.style.display = 'none';
@@ -242,40 +227,32 @@
   }
 
   function reattachInlineHandlersForUid(uid){
-    // Os atributos oninput/onclick inline já existem nas strings geradas.
-    // Precisamos apenas ligar delegações para ações que usamos aqui (botões)
     const btnDistribuir = document.querySelector(`[data-action="distribuir"][data-uid="${uid}"]`);
-    if (btnDistribuir) btnDistribuir.addEventListener('click', ()=>distribuirIgual(uid));
+    if (btnDistribuir) { btnDistribuir.removeEventListener('click', ()=>distribuirIgual(uid)); btnDistribuir.addEventListener('click', ()=>distribuirIgual(uid)); }
     const btnRemoveGid = document.querySelector(`[data-action="remove-gid"][data-uid="${uid}"]`);
-    if (btnRemoveGid) btnRemoveGid.addEventListener('click', ()=>removeGid(uid));
-    // inputs mes
+    if (btnRemoveGid) { btnRemoveGid.removeEventListener('click', ()=>removeGid(uid)); btnRemoveGid.addEventListener('click', ()=>removeGid(uid)); }
     for (let i=0;i<12;i++){
       const inMes = document.getElementById(`sup-${uid}-${i}`);
-      if (inMes) inMes.addEventListener('input', ()=>validarTeto(uid, 'mes'));
+      if (inMes) { inMes.removeEventListener('input', ()=>validarTeto(uid, 'mes')); inMes.addEventListener('input', ()=>validarTeto(uid, 'mes')); }
     }
     const totalInput = document.getElementById(`total-input-${uid}`);
-    if (totalInput) totalInput.addEventListener('input', ()=>validarTeto(uid, 'teto'));
+    if (totalInput) { totalInput.removeEventListener('input', ()=>validarTeto(uid, 'teto')); totalInput.addEventListener('input', ()=>validarTeto(uid, 'teto')); }
   }
 
-  // Remove gid block por uid
   function removeGid(uid){
-    // encontrar wrapper com data-uid
     const wrapper = document.querySelector(`.duod-wrap[data-uid="${uid}"]`);
     if (!wrapper) return;
     const gidBlock = wrapper.closest('.gid-block');
     if (gidBlock) gidBlock.remove();
-    // atualiza activeUids e estado
     activeUids = activeUids.filter(x=>x!==uid);
     checkFormBlockState();
     buildResumo();
     saveDraft();
   }
 
-  // Remove bloco inteiro por id
   function removeBlockById(blockId){
     const el = document.getElementById(blockId);
     if (!el) return;
-    // remover uids associados a esse bloco
     const uids = Array.from(el.querySelectorAll('[id^="sup-"]')).map(n=>{
       const m = n.id.match(/^sup-(\d+)-\d+$/);
       return m ? parseInt(m[1],10) : null;
@@ -287,7 +264,6 @@
     saveDraft();
   }
 
-  // Reconstrói resumo (mantive comportamento original)
   function fmt(v){ return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2}); }
   function buildResumo(){
     const body=document.getElementById('resumoBody'); if(!body) return;
@@ -321,7 +297,6 @@
     body.appendChild(trG);
   }
 
-  // RESET / SELECT TIPO / UI
   function selectTipo(tipo){
     currentTipo=tipo;
     activeUids = [];
@@ -354,9 +329,36 @@
     if (stepSel) stepSel.classList.remove('hidden');
   }
 
-  // ---------- PERSISTÊNCIA (localStorage) ----------
-  const STORAGE_KEY = 'limites_solicitacao_draft_v1';
+  // ---------- ANEXOS (UI leve, nomes apenas) ----------
+  function renderAttachments(list){
+    const el = document.getElementById('attachmentsList');
+    if (!el) return;
+    el.innerHTML = '';
+    (list || []).forEach((name,idx)=>{
+      const div = document.createElement('div');
+      div.style.padding='6px 8px';
+      div.style.border='1px solid #e6e6e6';
+      div.style.marginBottom='6px';
+      div.style.borderRadius='6px';
+      div.textContent = name;
+      el.appendChild(div);
+    });
+  }
 
+  function handleFileInput(e){
+    const files = Array.from(e.target.files || []);
+    const names = files.map(f=>f.name);
+    renderAttachments(names);
+    // salvar apenas nomes no rascunho (não conteúdo)
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const state = raw ? JSON.parse(raw) : {};
+      state.attachments = names;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(err){ console.warn('failed to save attachments to draft', err); }
+  }
+
+  // ---------- PERSISTÊNCIA (localStorage) ----------
   function saveDraft(){
     try {
       const state = {
@@ -364,7 +366,8 @@
         suplHtml: document.getElementById('suplBlocks') ? document.getElementById('suplBlocks').innerHTML : '',
         remajHtml: document.getElementById('remajBlocks') ? document.getElementById('remajBlocks').innerHTML : '',
         justificativa: (document.getElementById('justificativa') && document.getElementById('justificativa').value) || '',
-        fonte: (document.getElementById('selectFonte') && document.getElementById('selectFonte').value) || ''
+        fonte: (document.getElementById('selectFonte') && document.getElementById('selectFonte').value) || '',
+        attachments: (function(){ const raw=localStorage.getItem(STORAGE_KEY); try{ const s=raw?JSON.parse(raw):{}; return s.attachments||[] }catch(e){return []}})()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch(e){
@@ -374,7 +377,6 @@
 
   function clearDraft(){
     localStorage.removeItem(STORAGE_KEY);
-    // também limpa UI
     const supr = document.getElementById('suplBlocks');
     if (supr) supr.innerHTML = '';
     const rem = document.getElementById('remajBlocks');
@@ -383,6 +385,8 @@
     if (just) just.value = '';
     const fonte = document.getElementById('selectFonte');
     if (fonte) fonte.value = '';
+    const attachments = document.getElementById('attachmentsList'); if (attachments) attachments.innerHTML='';
+    const fileInput = document.getElementById('fileInput'); if (fileInput) fileInput.value='';
     suplCount = 0; remajCount = 0; gidUid = 0; activeUids = [];
     saveDraft();
     buildResumo();
@@ -414,6 +418,7 @@
       }
       if (state.justificativa && document.getElementById('justificativa')) document.getElementById('justificativa').value = state.justificativa;
       if (state.fonte && document.getElementById('selectFonte')) document.getElementById('selectFonte').value = state.fonte;
+      if (state.attachments && Array.isArray(state.attachments)) renderAttachments(state.attachments);
 
       // reajusta counters e reanexa handlers
       const maxUid = findMaxUid();
@@ -421,10 +426,9 @@
       suplCount = document.querySelectorAll('#suplBlocks .item-block').length;
       remajCount = document.querySelectorAll('#remajBlocks .item-block').length;
 
-      // Reanexa listeners para botões que usamos (delegação para botões dinâmicos)
       document.querySelectorAll('[data-action="distribuir"]').forEach(b=> {
         const uid = parseInt(b.getAttribute('data-uid'),10);
-        b.removeEventListener('click', ()=>distribuirIgual(uid)); // safe
+        b.removeEventListener('click', ()=>distribuirIgual(uid));
         b.addEventListener('click', ()=>distribuirIgual(uid));
       });
       document.querySelectorAll('[data-action="remove-gid"]').forEach(b=>{
@@ -474,16 +478,16 @@
 
     const btnClearDraft = document.getElementById('btnClearDraft');
     if (btnClearDraft) btnClearDraft.addEventListener('click', ()=>{ if (confirm('Limpar rascunho? Esta ação é irreversível.')) clearDraft(); });
+
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.addEventListener('change', handleFileInput);
   }
 
   // Inicialização quando a página carrega
   function init(){
     setupGlobalHandlers();
-    // Se houver rascunho, restaura; caso contrário, nada
     restoreDraft();
-    // caso não tenha rascunho e estiver vazio, mantém a tela inicial
     buildResumo();
-    // Observadores para salvar automaticamente
     document.addEventListener('input', function(){ saveDraft(); }, {capture:true});
   }
 
@@ -496,11 +500,9 @@
   window.validarTeto = validarTeto;
   window.distribuirIgualCalc = distribuirIgualCalc;
 
-  // Inicializa em DOMContentLoaded
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  // para testes Node/Jest
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { distribuirIgualCalc };
   }
