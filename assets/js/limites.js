@@ -162,8 +162,8 @@
       </div>
       <div class="item-block-body">
         <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
-          <div style="flex:1;display:flex;align-items:center;gap:8px;"><strong>Origem</strong><button type="button" class="btn-action-small" data-action="add-remaj-leg" data-remaj="${id}" data-role="orig">＋ Perna</button></div>
-          <div style="flex:1;display:flex;align-items:center;gap:8px;"><strong>Destino</strong><button type="button" class="btn-action-small" data-action="add-remaj-leg" data-remaj="${id}" data-role="dest">＋ Perna</button></div>
+          <div style="flex:1;display:flex;align-items:center;gap:8px;"><strong>Origem</strong><button type="button" class="btn-action-small" data-action="add-remaj-leg" data-remaj="${id}" data-role="orig">+remanejamento</button></div>
+          <div style="flex:1;display:flex;align-items:center;gap:8px;"><strong>Destino</strong><button type="button" class="btn-action-small" data-action="add-remaj-leg" data-remaj="${id}" data-role="dest">+remanejamento</button></div>
         </div>
         <div class="remaj-group">
           <div class="remaj-group-head origem"><span class="remaj-group-title">📤 Origem (Redução)</span></div>
@@ -200,8 +200,8 @@
     if(container) container.appendChild(div);
 
     // when mapp select changes update dataset
-    const mappSelect = div.querySelector('select');
-    if(mappSelect){ mappSelect.addEventListener('change', ()=>{ div.dataset.mapp = mappSelect.value; buildResumo(); saveDraft(); }); }
+    const selects = div.querySelectorAll('select');
+    if(selects && selects[0]){ selects[0].addEventListener('change', ()=>{ div.dataset.mapp = selects[0].value; buildResumo(); saveDraft(); }); }
     reattachHandlersForUid(uid);
   }
 
@@ -297,7 +297,7 @@
     document.querySelectorAll('#remajBlocks .item-block').forEach(rb=>{
       const remajId = rb.id.replace('remaj-block-',''); const rem = {id:remajId, orig:[], dest:[]};
       rb.querySelectorAll('.remaj-group-body#orig-'+remajId+' .gid-block, .remaj-group-body#dest-'+remajId+' .gid-block').forEach(gb=>{
-        const role = gb.dataset.role || (gb.closest('#orig-'+remajId)?'orig':'dest'); const mapp = gb.querySelector('select') ? gb.querySelectorAll('select')[0].value : '';
+        const role = gb.dataset.role || (gb.closest('#orig-'+remajId)?'orig':'dest'); const selects = gb.querySelectorAll('select'); const mapp = selects && selects[0] ? selects[0].value : '';
         const uidNode = gb.querySelector('.duod-wrap'); const uid = uidNode ? uidNode.getAttribute('data-uid') : null; const total = uid ? (parseFloat(document.getElementById(`total-input-${uid}`).value)||0) : 0;
         const obj = {mapp, total}; if(role==='orig') rem.orig.push(obj); else rem.dest.push(obj);
       });
@@ -334,7 +334,23 @@
   function setupGlobal(){
     const btnAddSupl = document.getElementById('btnAddSupl'); if(btnAddSupl) btnAddSupl.addEventListener('click', addSupl);
     const btnAddRemaj = document.getElementById('btnAddRemaj'); if(btnAddRemaj) btnAddRemaj.addEventListener('click', addRemaj);
-    document.addEventListener('click', function(e){ const t=e.target; if(!t) return; const action = t.getAttribute && t.getAttribute('data-action'); if(!action) return; if(action==='remove-block'){ const b=t.getAttribute('data-block'); if(b) removeBlockById(b); } if(action==='add-remaj-leg'){ const remaj = t.getAttribute('data-remaj'); const role = t.getAttribute('data-role'); if(remaj && role){ addRemajLeg((role==='orig'?'orig-':'dest-')+remaj, role, parseInt(remaj,10)); } } });
+    document.addEventListener('click', function(e){
+      const btn = e.target.closest && e.target.closest('[data-action]');
+      if(!btn) return;
+      const action = btn.getAttribute('data-action');
+      if(!action) return;
+      if (action === 'remove-block'){
+        const block = btn.getAttribute('data-block'); if (block) removeBlockById(block);
+      }
+      if (action === 'add-remaj-leg'){
+        const remaj = btn.getAttribute('data-remaj'); const role = btn.getAttribute('data-role');
+        if (remaj && role){
+          // compute container id robustly and append
+          const containerId = (role === 'orig' ? 'orig-' : 'dest-') + remaj;
+          addRemajLeg(containerId, role, parseInt(remaj,10));
+        }
+      }
+    });
     const btnClearDraft = document.getElementById('btnClearDraft'); if(btnClearDraft) btnClearDraft.addEventListener('click', ()=>{ if(confirm('Limpar rascunho? Esta ação é irreversível.')) clearDraft(); });
     const fileInput = document.getElementById('fileInput'); if(fileInput) fileInput.addEventListener('change', function(e){ const files = Array.from(e.target.files || []); const names = files.map(f=>f.name); const el = document.getElementById('attachmentsList'); if(el) el.innerHTML = names.map(n=>`<div style="padding:6px 0">📎 ${n}</div>`).join(''); try{ const st = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'); st.attachments = names; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }catch(e){} });
     const btnSalvar = document.getElementById('btnSalvar'); if(btnSalvar) btnSalvar.addEventListener('click', onSubmit);
