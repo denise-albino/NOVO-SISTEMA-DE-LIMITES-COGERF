@@ -58,6 +58,28 @@
     return html;
   }
 
+  // ---------- helpers for UI normalization ----------
+  function normalizeRemajButtons(){
+    // Ensure each remaj block's Origem and Destino headers have an add button (migrate older rascunhos)
+    document.querySelectorAll('.item-block[id^="remaj-block-"]').forEach(rb=>{
+      const id = rb.id.replace('remaj-block-','');
+      const origHead = rb.querySelector('.remaj-group-head.origem');
+      if(origHead && !origHead.querySelector('[data-action="add-remaj-leg"]')){
+        const btn = document.createElement('button');
+        btn.type='button'; btn.className='btn-action-small'; btn.setAttribute('data-action','add-remaj-leg');
+        btn.setAttribute('data-remaj',id); btn.setAttribute('data-role','orig'); btn.textContent='+remanejamento';
+        origHead.appendChild(btn);
+      }
+      const destHead = rb.querySelector('.remaj-group-head.destino');
+      if(destHead && !destHead.querySelector('[data-action="add-remaj-leg"]')){
+        const btn2 = document.createElement('button');
+        btn2.type='button'; btn2.className='btn-action-small'; btn2.setAttribute('data-action','add-remaj-leg');
+        btn2.setAttribute('data-remaj',id); btn2.setAttribute('data-role','dest'); btn2.textContent='+remanejamento';
+        destHead.appendChild(btn2);
+      }
+    });
+  }
+
   // ---------- handlers/validators ----------
   function validarTeto(uid){
     const inputTeto = document.getElementById(`total-input-${uid}`);
@@ -220,18 +242,85 @@
 
   function removeGid(uid){ const wrap = document.querySelector(`.duod-wrap[data-uid="${uid}"]`); if(!wrap) return; const gidBlock = wrap.closest('.gid-block'); if(gidBlock) gidBlock.remove(); buildResumo(); saveDraft(); updateSalvarState(); }
 
-  const base = {
-    MANUTENÇÃO:[{mapp:'3',desc:'Manutenção Unidades',gid:'SERVIÇOS PJ',deliberado:1240000,revisado:1240000}],
-    FINALÍSTICO:[{mapp:'12',desc:'Fortalecimento Social',gid:'MATERIAL CONSUMO',deliberado:650000,revisado:650000}],
-    GESTÃO:[{mapp:'5',desc:'Gestão e Manutenção',gid:'DIÁRIAS',deliberado:320000,revisado:320000}]
-  };
-  function fmt(v){ return 'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+  // resto do arquivo: buildResumo, finalValidation, onSubmit, persistence, setupGlobal, init, etc.
+  // We'll ensure setupGlobal contains a delegation handler that supports add-remaj-leg and other actions,
+  // and that restoreDraft() calls normalizeRemajButtons() to migrate rascunhos antigos.
 
-  // rest of file unchanged: buildResumo, finalValidation, onSubmit, persistence, setupGlobal, init etc.
+  // Re-define setupGlobal with robust delegation (ensures add-remaj-leg works even for buttons inserted later)
+  function setupGlobal(){
+    const btnAddSupl = document.getElementById('btnAddSupl'); if(btnAddSupl) btnAddSupl.addEventListener('click', addSupl);
+    const btnAddRemaj = document.getElementById('btnAddRemaj'); if(btnAddRemaj) btnAddRemaj.addEventListener('click', addRemaj);
 
-  // (for brevity the remainder of the file is unchanged from previous commit)
+    document.addEventListener('click', function(e){
+      const btn = e.target.closest && e.target.closest('[data-action]');
+      if(!btn) return;
+      const action = btn.getAttribute('data-action');
+      if(!action) return;
 
-  document.addEventListener('DOMContentLoaded', function(){ setupGlobal(); restoreDraft(); buildResumo(); document.addEventListener('input', function(){ saveDraft(); }, {capture:true}); updateSalvarState(); });
+      if (action === 'remove-block'){
+        const block = btn.getAttribute('data-block'); if (block) removeBlockById(block);
+        return;
+      }
+
+      if (action === 'add-remaj-leg'){
+        const remaj = btn.getAttribute('data-remaj'); const role = btn.getAttribute('data-role');
+        if (remaj && role){
+          const containerId = (role === 'orig' ? 'orig-' : 'dest-') + remaj;
+          addRemajLeg(containerId, role, parseInt(remaj,10));
+        }
+        return;
+      }
+
+      if (action === 'distribuir'){
+        const uid = parseInt(btn.getAttribute('data-uid'),10); if(!isNaN(uid)) distribuirIgual(uid); return;
+      }
+
+      if (action === 'remove-gid'){
+        const uid = parseInt(btn.getAttribute('data-uid'),10); if(!isNaN(uid)) removeGid(uid); return;
+      }
+
+    }, false);
+
+    const btnClearDraft = document.getElementById('btnClearDraft'); if(btnClearDraft) btnClearDraft.addEventListener('click', ()=>{ if(confirm('Limpar rascunho? Esta ação é irreversível.')) clearDraft(); });
+    const fileInput = document.getElementById('fileInput'); if(fileInput) fileInput.addEventListener('change', function(e){ const files = Array.from(e.target.files || []); const names = files.map(f=>f.name); const el = document.getElementById('attachmentsList'); if(el) el.innerHTML = names.map(n=>`<div style="padding:6px 0">📎 ${n}</div>`).join(''); try{ const st = JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}'); st.attachments = names; localStorage.setItem(STORAGE_KEY, JSON.stringify(st)); }catch(e){} });
+    const btnSalvar = document.getElementById('btnSalvar'); if(btnSalvar) btnSalvar.addEventListener('click', onSubmit);
+    const just = document.getElementById('justificativa'); if(just) just.addEventListener('input', ()=>{ buildResumo(); saveDraft(); });
+    const fonte = document.getElementById('selectFonte'); if(fonte) fonte.addEventListener('change', updateSalvarState);
+  }
+
+  // We must ensure restoreDraft triggers normalization so old rascunhos get the missing buttons
+  function restoreDraft(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return; const state = JSON.parse(raw); if(state.currentTipo){ currentTipo = state.currentTipo; document.getElementById('stepSel').classList.add('hidden'); document.getElementById('mainForm').classList.remove('hidden'); document.getElementById('tipoBadge').textContent = currentTipo.toUpperCase(); if(currentTipo==='suplementacao'){ document.getElementById('suplementacaoSection').classList.remove('hidden'); document.getElementById('remanejamentoSection').classList.add('hidden'); } else { document.getElementById('remanejamentoSection').classList.remove('hidden'); document.getElementById('suplementacaoSection').classList.add('hidden'); } }
+    if(state.suplHtml && document.getElementById('suplBlocks')) document.getElementById('suplBlocks').innerHTML = state.suplHtml;
+    if(state.remajHtml && document.getElementById('remajBlocks')) document.getElementById('remajBlocks').innerHTML = state.remajHtml;
+    if(state.justificativa && document.getElementById('justificativa')) document.getElementById('justificativa').value = state.justificativa;
+    if(state.fonte && document.getElementById('selectFonte')) document.getElementById('selectFonte').value = state.fonte;
+    // normalize UI for older rascunhos
+    normalizeRemajButtons();
+    // reattach handlers
+    const maxUid = findMaxUid(); gidUid = Math.max(gidUid, maxUid+1);
+    suplCount = document.querySelectorAll('#suplBlocks .item-block').length; remajCount = document.querySelectorAll('#remajBlocks .item-block').length;
+    // attach distribution/remove handlers
+    document.querySelectorAll('[data-action="distribuir"]').forEach(b=>{ b.addEventListener('click', distribuirIgualBound); });
+    document.querySelectorAll('[data-action="remove-gid"]').forEach(b=>{ b.addEventListener('click', removeGidBound); });
+    document.querySelectorAll('[id^="total-input-"]').forEach(inp=>{ inp.addEventListener('input', validarTetoBound); });
+    document.querySelectorAll('[id^="sup-"]').forEach(inp=>{ inp.addEventListener('input', validarTetoBound); });
+    buildResumo(); updateSalvarState(); }catch(e){ console.warn('restoreDraft',e);} }
+
+  function init(){ setupGlobal(); restoreDraft(); // ensure normalization also on first load
+    normalizeRemajButtons(); buildResumo(); document.addEventListener('input', function(){ saveDraft(); }, {capture:true}); updateSalvarState(); }
+
+  // expose for inline
+  window.selectTipo = function(tipo){ currentTipo=tipo; document.getElementById('stepSel').classList.add('hidden'); document.getElementById('mainForm').classList.remove('hidden'); document.getElementById('tipoBadge').textContent = (tipo||'').toUpperCase(); if(tipo==='suplementacao'){ document.getElementById('suplementacaoSection').classList.remove('hidden'); document.getElementById('remanejamentoSection').classList.add('hidden'); document.getElementById('suplBlocks').innerHTML=''; suplCount=0; addSupl(); } else { document.getElementById('remanejamentoSection').classList.remove('hidden'); document.getElementById('suplementacaoSection').classList.add('hidden'); document.getElementById('remajBlocks').innerHTML=''; remajCount=0; addRemaj(); } updateSalvarState(); };
+  window.resetForm = function(){ document.getElementById('mainForm').classList.add('hidden'); document.getElementById('stepSel').classList.remove('hidden'); };
+  window.addSupl = addSupl; window.addRemaj = addRemaj; window.distribuirIgual = function(uid){ distribuirIgual(uid); };
+
+  // helper wrappers used for addEventListener removeEventListener stable references
+  window.distribuirIgualCalc = distribuirIgualCalc;
+  function distribuirIgualBound(e){ const uid = parseInt(e.currentTarget.getAttribute('data-uid'),10); distribuirIgual(uid); }
+  function removeGidBound(e){ const uid = parseInt(e.currentTarget.getAttribute('data-uid'),10); removeGid(uid); }
+  function validarTetoBound(e){ const idm = e.currentTarget.id.match(/^total-input-(\d+)$/) || e.currentTarget.id.match(/^sup-(\d+)-\d+$/); if(idm){ validarTeto(parseInt(idm[1],10)); } }
+
+  document.addEventListener('DOMContentLoaded', init);
 
   // export for tests
   if (typeof module !== 'undefined' && module.exports) { module.exports = { distribuirIgualCalc }; }
